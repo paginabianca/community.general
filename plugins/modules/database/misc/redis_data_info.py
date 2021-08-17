@@ -20,7 +20,11 @@ options:
     description:
       - Database key.
     type: str
+<<<<<<< HEAD
     required: true
+=======
+    required: True
+>>>>>>> 9a12ee9b (Docfix and sanity)
 
 extends_documentation_fragment:
   - community.general.redis
