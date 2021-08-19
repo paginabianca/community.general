@@ -61,7 +61,6 @@ def proxmox_interface_argument_spec():
         cidr=dict(type='str'),
         cidr6=dict(type='str'),
         comments=dict(type='str'),
-        comments6=dict(type='str'),
         gateway=dict(type='str'),
         gateway6=dict(type='str'),
         mtu=dict(type='int'),
