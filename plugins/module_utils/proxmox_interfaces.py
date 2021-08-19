@@ -116,8 +116,6 @@ def proxmox_map_interface_args(params):
         ret['gateway6'] = params['gateway6']
     if params['comments'] is not None:
         ret['comments'] = params['comments']
-    if params['comments6'] is not None:
-        ret['comments6'] = params['comments6']
     if params['mtu'] is not None:
         if int(params['mtu']) <= 65520 and int(params['mtu']) >= 1280:
             ret['mtu'] = params['mtu']
