@@ -15,6 +15,9 @@ short_description: Management network interfaces on a Proxmox node.
 version_added: 3.6.0
 description:
   - Allows you to create/update/delete network interfaces of a Proxmox node.
+  - The module tries to understand what interface configurations get updated
+    and applies that changes. Interfaces that already have the a the specified
+    configuration, are not changed.
 author: "Andreas Botzner (@paginabianca) <andreas at botzner dot com>"
 options:
   config:
