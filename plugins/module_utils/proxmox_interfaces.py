@@ -4,9 +4,11 @@
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import absolute_import, division, print_function
+
+from ansible.module_utils.parsing.convert_bool import boolean
 __metaclass__ = type
 
-from ansible_collections.community.general.plugins.module_utils.proxmox import ProxmoxAnsible
+from ansible_collections.community.general.plugins.module_utils.proxmox import proxmox_to_ansible_bool
 
 
 def proxmox_interface_argument_spec():
@@ -78,6 +80,17 @@ def proxmox_interface_argument_spec():
                    default='present'
                    )
     )
+
+
+def proxmox_to_ansible_interface_args(params):
+    ret = params
+    booleans = ['autostart',
+                'bridge_vlan_ports',
+                ]
+    for k in booleans:
+        if k in ret:
+            ret[k] = proxmox_to_ansible_bool(ret[k])
+    return ret
 
 
 def proxmox_map_interface_args(params):
@@ -239,31 +252,52 @@ def check_doublicates(module):
             ifaces_set.add(iface)
 
 
-def get_config_diff(module, nics, config):
-    present_nics = {nic['name']: nic for nic in nics}
+def get_config_diff(current_nics, updated_nics):
     ret = {}
+    existing_nics = {}
+    # map list of existing nics to dict and adjust values
+    print(current_nics)
+    for nic in current_nics:
+        print(nic)
+        existing_nics[nic['iface']] = proxmox_to_ansible_interface_args(nic)
+    current_nics = existing_nics
 
     for nic in updated_nics:
+        print("updated_nics")
+        print(nic)
+        name = nic['name']
+        mapped_nic = proxmox_map_interface_args(nic)
+        # NIC gets deleted
         if nic['state'] == 'absent':
-            ret[nic['name']] = {'before':}
-        if nic['name'] not in present_nics:
-            ret[nic['iface']] = {'before': '', 'after': nic}
-        if nic['state'] == 'absent':
-            ret[nic['name']] = {'before': }
-
-    if config_after['state'] == 'absent':
-        config_after == {}
-    if 'comments' in config_after:
-        config_after['comments'] = config_after['comments'].strip('\n') + '\n'
-    for k, v in config_after.items():
-        if k not in config_before:
-            ret[k] = {'before': '', 'after': v}
-            continue
-        before = config_before[k]
-        if v != before:
-            ret[k] = {'before': before, 'after': v}
-            continue
-    if len(ret) != 0:
+            ret[name] = {'before': current_nics[name],
+                         'after': 'absent'}
+        # NIC gets added
+        elif name not in current_nics:
+            ret[name] = {'before': '', 'after': mapped_nic}
+        # NIC gets changed
+        else:
+            diff = get_diff_single_nic(nic, current_nics[name])
+            if diff is not None:
+                ret[name] = diff
+    if len(ret) > 0:
         return ret
-    else:
-        return None
+    return None
+
+
+"""
+returns difference of two interface configurations
+"""
+
+
+def get_diff_single_nic(new, old):
+    ret = {}
+    if 'comments' in new:
+        new['comments'] = new['comments'].strip('\n') + '\n'
+    for key in new.keys():
+        if key in old and new[key] != old[key]:
+            ret[key] = {'before': old[key],
+                        'after': new[key]
+                        }
+    if len(ret) > 0:
+        return ret
+    return None

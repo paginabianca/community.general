@@ -12,27 +12,73 @@ __metaclass__ = type
 from ansible_collections.community.general.plugins.module_utils import proxmox_interfaces as proxmox_utils
 from ansible_collections.community.general.plugins.modules.cloud.misc import proxmox_interfaces
 from ansible_collections.community.general.tests.unit.compat.mock import MagicMock
+from pprint import pp
 
 NODE = 'node01'
 
-CONFIG_BEFORE = {'active': 1,
+CONFIG_BEFORE = [{'active': 1,
                  'address': '10.10.10.10',
-                 'autostart': 1,
-                 'bond_miimon': '100',
-                 'bond_mode': 'balance-rr',
+                  'autostart': 1,
+                  'bond_miimon': '100',
+                  'bond_mode': 'balance-rr',
+                  'cidr': '10.10.10.10/24',
+                  'comments': 'COMMENT\n',
+                  'families': ['inet'],
+                  'iface': 'bond0',
+                  'method': 'static',
+                  'method6': 'manual',
+                  'netmask': '24',
+                  'priority': 7,
+                  'slaves': 'enp35s0',
+                  'type': 'bond'}]
+CONFIG_EQUAL = [{'name': 'bond0',
+                 'state': 'present',
+                 'type': 'bond',
                  'cidr': '10.10.10.10/24',
-                 'comments': 'COMMENT\n',
-                 'families': ['inet'],
-                 'iface': 'bond0',
-                 'method': 'static',
-                 'method6': 'manual',
-                 'netmask': '24',
-                 'priority': 7,
+                 'comments': 'COMMENT',
+                 'autostart': True,
                  'slaves': 'enp35s0',
-                 'type': 'bond'}
-CONFIG_AFTER = {'cidr': '192.168.0.1/24',
+                 'bond_primary': None,
+                 'bond_mode': 'balance-rr',
+                 'bond_xmit_hash_policy': None,
+                 'bridge_ports': None,
+                 'bridge_vlan_ports': None,
+                 'cidr6': None,
+                 'gateway': None,
+                 'gateway6': None,
+                 'mtu': None,
+                 'ovs_bonds': None,
+                 'ovs_options': None,
+                 'ovs_bridge': None,
+                 'ovs_ports': None,
+                 'ovs_tag': None,
+                 'vlan_id': None,
+                 'vlan_raw_device': None
+                 }]
+CONFIG_AFTER = [{'name': 'bond0',
+                 'type': 'bond',
+                 'state': 'present',
+                 'cidr': '192.168.0.1/24',
                 'comments': 'ANOTHER COMMENT',
-                }
+                 'autostart': True,
+                 'slaves': 'enp35s1',
+                 'bond_primary': None,
+                 'bond_mode': 'balance-rr',
+                 'bond_xmit_hash_policy': None,
+                 'bridge_ports': None,
+                 'bridge_vlan_ports': None,
+                 'cidr6': None,
+                 'gateway': None,
+                 'gateway6': None,
+                 'mtu': None,
+                 'ovs_bonds': None,
+                 'ovs_options': None,
+                 'ovs_bridge': None,
+                 'ovs_ports': None,
+                 'ovs_tag': None,
+                 'vlan_id': None,
+                 'vlan_raw_device': None
+                 }]
 
 
 def test_map_interface_args(capfd, mocker):
@@ -93,22 +139,46 @@ def test_check_doublicates(mocker):
         msg="Interface {0} can only be present once in list".format(iface))
 
 
-def test_get_config_diff_nodiff():
-    ret = proxmox_utils.get_config_diff(CONFIG_BEFORE, CONFIG_BEFORE)
+def test_get_config_diff_nodiff(capfd):
+    ret = proxmox_utils.get_config_diff(CONFIG_BEFORE, CONFIG_EQUAL)
+    pp('REEEEEE')
+    pp(ret)
     assert ret is None
 
 
-def test_get_config_diff():
+def test_get_config_diff(capfd):
     ret = proxmox_utils.get_config_diff(CONFIG_BEFORE, CONFIG_AFTER)
     assert ret is not None
-    assert len(ret) == 2
-    assert 'comments' in ret
-    assert 'cidr' in ret
+    pp('REEEEEE')
+    pp(ret)
+    assert len(ret) == 1
+    assert 'bond0' in ret
+    bond = ret['bond0']
+    keys = ['cidr', 'comments', 'slaves']
+    for key in keys:
+        assert key in bond
+        pp("KEYYYYYYYYY")
+        pp(type(bond[key]))
+        pp(bond[key])
+        assert isinstance(bond[key], dict)
+        assert 'before' in bond[key]
+        assert 'after' in bond[key]
 
 
-def test_get_config_diff_new_interface():
-    ret = proxmox_utils.get_config_diff({}, CONFIG_AFTER)
+def test_get_config_diff_new_interface(capfd):
+    ret = proxmox_utils.get_config_diff([], CONFIG_AFTER)
+    pp('REEEEEE')
+    pp(ret)
     assert ret is not None
     assert len(ret) == len(CONFIG_AFTER)
-    for k in CONFIG_AFTER:
-        assert k in ret
+    assert 'bond0' in ret
+    bond = ret['bond0']
+    keys = ['cidr', 'comments', 'slaves', 'type',
+            'iface', 'bond_mode', 'autostart']
+    assert 'before' in bond
+    assert bond['before'] == ''
+    assert 'after' in bond
+    config_after = bond['after']
+    assert isinstance(config_after, dict)
+    for key in keys:
+        assert key in config_after

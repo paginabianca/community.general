@@ -321,13 +321,17 @@ def main():
             module.fail_json(**result)
 
     check_doublicates(module)
-
     present_nics = set(nic['iface'] for nic in nics)
-    result['diff'] = get_config_diff(module, nics, config)
+    changed_nics = get_config_diff(nics, config)
+    config = {nic['name']: nic for nic in config}
+
+    result['diff'] = changed_nics
+
     if module.check_mode:
         module.exit_json(**result)
 
-    for nic in config:
+    for key in changed_nics:
+        nic = config[key]
         name = nic['name']
         try:
             interface_args = proxmox_map_interface_args(nic)
@@ -391,10 +395,10 @@ def main():
             result['msg'].append(
                 'Successfully rolled back uncommitted changes on node {0}'.format(node))
             result['changed'] = False
-            module.fail_json(**result)
         except Exception as e:
             result['errors'].append(
                 'Failed to roll back configuration on node {0} with error: {1}'.format(node, str(e)))
+        finally:
             module.fail_json(**result)
     else:
         module.fail_json(**result)
