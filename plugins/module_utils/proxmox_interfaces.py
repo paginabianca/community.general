@@ -29,8 +29,6 @@ def proxmox_interface_argument_spec():
                   ],
                   default='bridge'
                   ),
-        address=dict(type='str'),
-        address6=dict(type='str'),
         autostart=dict(type='bool',
                        default=True
                        ),
@@ -64,8 +62,6 @@ def proxmox_interface_argument_spec():
         gateway=dict(type='str'),
         gateway6=dict(type='str'),
         mtu=dict(type='int'),
-        netmask=dict(type='str'),
-        netmask6=dict(type='int'),
         ovs_bonds=dict(type='str'),
         ovs_bridge=dict(type='str'),
         ovs_options=dict(type='str'),
@@ -90,10 +86,6 @@ def proxmox_map_interface_args(params):
         ret['iface'] = params['name']
     if params['type'] is not None:
         ret['type'] = params['type']
-    if params['address'] is not None:
-        ret['address'] = params['address']
-    if params['address6'] is not None:
-        ret['address6'] = params['address6']
     if params['autostart'] is not None:
         ret['autostart'] = '1' if params['autostart'] else '0'
     if params['bond_primary'] is not None:
@@ -122,14 +114,6 @@ def proxmox_map_interface_args(params):
         else:
             raise ValueError(
                 'MTU has to be be between 1280 and 65520 but was {0}'.format(params['mtu']))
-    if params['netmask'] is not None:
-        ret['netmask'] = params['netmask']
-    if params['netmask6'] is not None:
-        if int(params['netmask6']) >= 0 and int(params['netmask6']) <= 128:
-            ret['netmask6'] = params['netmask6']
-        else:
-            raise ValueError(
-                'netmaks6 has to be between 0 and 128 but was {0}'.format(params['netmaks6']))
     if params['ovs_bonds'] is not None:
         ret['ovs_bonds'] = params['ovs_bonds']
     if params['ovs_options'] is not None:
@@ -238,6 +222,11 @@ def get_process_status(proxmox_api, node, upid):
         raise e
 
 
+"""
+Check for doublicate interfaces in the 'config' parameter.
+"""
+
+
 def check_doublicates(module):
     config = module.params['config']
     ifaces = list(nic['name'] for nic in config)
@@ -248,3 +237,33 @@ def check_doublicates(module):
                 msg="Interface {0} can only be present once in list".format(iface))
         else:
             ifaces_set.add(iface)
+
+
+def get_config_diff(module, nics, config):
+    present_nics = {nic['name']: nic for nic in nics}
+    ret = {}
+
+    for nic in updated_nics:
+        if nic['state'] == 'absent':
+            ret[nic['name']] = {'before':}
+        if nic['name'] not in present_nics:
+            ret[nic['iface']] = {'before': '', 'after': nic}
+        if nic['state'] == 'absent':
+            ret[nic['name']] = {'before': }
+
+    if config_after['state'] == 'absent':
+        config_after == {}
+    if 'comments' in config_after:
+        config_after['comments'] = config_after['comments'].strip('\n') + '\n'
+    for k, v in config_after.items():
+        if k not in config_before:
+            ret[k] = {'before': '', 'after': v}
+            continue
+        before = config_before[k]
+        if v != before:
+            ret[k] = {'before': before, 'after': v}
+            continue
+    if len(ret) != 0:
+        return ret
+    else:
+        return None
