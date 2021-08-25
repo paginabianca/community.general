@@ -294,6 +294,8 @@ def get_diff_single_nic(new, old):
     if 'comments' in new:
         new['comments'] = new['comments'].strip('\n') + '\n'
     for key in new.keys():
+        if key is None:
+            continue
         if key in old and new[key] != old[key]:
             ret[key] = {'before': old[key],
                         'after': new[key]

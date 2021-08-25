@@ -202,6 +202,7 @@ EXAMPLES = '''
         cidr: 192.168.5.4/24
         comments: 'This is a new VM bridge with the host inside'
     state: present
+    apply: true
 
 - name: Delete a list of interfaces from node01 and try to revert on error
   community.general.proxmox_interfaces:
@@ -240,6 +241,15 @@ diff:
         before:
         after: bridge
 
+msg:
+  description: A list of messages.
+  returned: always
+  type: list
+  elements: string
+  sample:
+    - Successfully updated interface: vmbr8
+    - Successfully updated interface: vmbr37
+    - Successfully reloaded and applied interface changes on node node01
 
 upid:
   description: UPID of the svreload:networking task
@@ -355,7 +365,8 @@ def main():
             else:
                 try:
                     update_nic(proxmox.proxmox_api, node, name, interface_args)
-                    msg.append('Successfully updated interface: {0}')
+                    msg.append(
+                        'Successfully updated interface: {0}'.format(name))
                     result['changed'] = True
                 except Exception as e:
                     errors.append(
