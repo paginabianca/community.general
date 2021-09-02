@@ -10,11 +10,12 @@ __metaclass__ = type
 
 DOCUMENTATION = r'''
 ---
-module: proxmox_kvm_info
-short_description: Retrieve information about VMs on Proxmox.
+module: proxmox_agent_info
+short_description: Retrieve QEMU guest agent info about VMs on Proxmox.
 version_added: 3.6.0
 description:
-  - Retrieve information about VMs running on Proxmox
+  - Retrieve detailed information about VMs running on Proxmox that support
+    the QEMU guest agent and have the service enabled.
 author: 'Andreas Botzner (@paginabianca) <andreas at botzner dot com>'
 options:
   node:
@@ -407,15 +408,15 @@ from ansible_collections.community.general.plugins.module_utils.proxmox import (
     proxmox_auth_argument_spec, ProxmoxAnsible, HAS_PROXMOXER, PROXMOXER_IMP_ERR)
 
 
-class ProxmoxTaskInfoAnsible(ProxmoxAnsible):
-    def get_task(self, upid, node):
-        tasks = self.get_tasks(node)
+class ProxmoxAgentInfoAnsible(ProxmoxAnsible):
+    def get_agent_info(self, upid, node):
+        agent_commands = self.get_commands(node)
         for task in tasks:
             if task.info['upid'] == upid:
                 return [task]
 
     def get_tasks(self, node):
-        tasks = self.proxmox_api.nodes(node).tasks.get()
+        commands = self.proxmox_api.nodes(node).qemu(vmid).agent('info')
         return [ProxmoxTask(task) for task in tasks]
 
 
@@ -431,9 +432,9 @@ class ProxmoxTask:
                 self.info[k] = v
 
 
-def proxmox_task_info_argument_spec():
+def proxmox_agent_info_argument_spec():
     return dict(
-        task=dict(type='str', aliases=['upid', 'name'], required=False),
+        vmid=dict(type='str', aliases=['name'], required=True),
         node=dict(type='str', required=True),
     )
 
@@ -454,20 +455,42 @@ def main():
     if not HAS_PROXMOXER:
         module.fail_json(msg=missing_required_lib(
             'proxmoxer'), exception=PROXMOXER_IMP_ERR)
-    proxmox = ProxmoxTaskInfoAnsible(module)
-    upid = module.params['task']
+    proxmox = ProxmoxAnsible(module)
     node = module.params['node']
-    if upid:
-        tasks = proxmox.get_task(upid=upid, node=node)
-    else:
-        tasks = proxmox.get_tasks(node=node)
-    if tasks is not None:
-        result['proxmox_tasks'] = [task.info for task in tasks]
-        module.exit_json(**result)
-    else:
-        result['msg'] = 'Task: {0} does not exist on node: {1}.'.format(
-            upid, node)
-        module.fail_json(**result)
+    vmid = module.params['vmid']
+    result = {}
+    state = None
+    try:
+        state = proxmox.proxmox_api.node(node).qemu(vmid).state().get()
+    except Exception as e:
+        module.fail_json(
+            msg="Getting status of VM {0} failed with exception: '{1}'".format(vmid, str(e)))
+    if state['status'] == 'stopped':
+        module.fail_json(msg="VM {0} is not running.".format(vmid))
+    agent = None
+    try:
+        agent = proxmox.proxmox_api.node(node).qemu(vmid).config().get()
+    except Exception as e:
+        module.fail_json(
+            msg="Getting config of VM {0} failed with exception: '{1}'".format(vmid, str(e)))
+    if 'agent' not in agent or agent['agent'] == 0:
+        module.fail_json(
+            msg="QEMU Guest Agent option not enabled.")
+    command = None
+    try:
+        commands = proxmox.proxmox_api.node(node).quemu(vmid).agent('info')
+    except Exception as e:
+        module.fail_json(
+            msg="Could not get supported QEMU guest agent commands on VM {0}".format(vmid))
+    interfaces = None
+    try:
+        interfaces = proxmox.proxmox_api.node(node).qemu(
+            vmid).agent('network-get-interfaces').get()
+    except Exception as e:
+        module.fail_json(
+            msg="Could not get network interface configuration.")
+
+    module.exit_json(interfaces=interfaces)
 
 
 if __name__ == '__main__':
