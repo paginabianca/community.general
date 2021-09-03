@@ -273,11 +273,11 @@ def main():
             continue
         try:
             res = proxmox.proxmox_api.nodes(
-                node).qemu(vmid).agent(k).get()
-            if k == 'hostname':
+                node).qemu(vmid).agent(k).get()['result']
+            if v == 'hostname':
                 result[v] = res['host-name']
                 continue
-            if k == 'memory-block-info':
+            if v == 'memory-block-size':
                 result[v] = res['size']
                 continue
             result[v] = res
