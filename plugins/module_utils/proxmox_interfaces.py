@@ -256,15 +256,13 @@ def get_config_diff(current_nics, updated_nics):
     ret = {}
     existing_nics = {}
     # map list of existing nics to dict and adjust values
-    print(current_nics)
+    # print(current_nics)
     for nic in current_nics:
-        print(nic)
+        # print(nic)
         existing_nics[nic['iface']] = proxmox_to_ansible_interface_args(nic)
     current_nics = existing_nics
 
     for nic in updated_nics:
-        print("updated_nics")
-        print(nic)
         name = nic['name']
         mapped_nic = proxmox_map_interface_args(nic)
         # NIC gets deleted
