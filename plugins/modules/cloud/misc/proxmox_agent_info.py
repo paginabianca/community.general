@@ -272,15 +272,8 @@ def main():
         if not qemu_commands['guest-' + k]['success-response']:
             continue
         try:
-            res = proxmox.proxmox_api.nodes(
+            result[v] = proxmox.proxmox_api.nodes(
                 node).qemu(vmid).agent(k).get()['result']
-            if v == 'hostname':
-                result[v] = res['host-name']
-                continue
-            if v == 'memory-block-size':
-                result[v] = res['size']
-                continue
-            result[v] = res
         except Exception as e:
             module.fail_json(
                 msg="Failed to execute {0} with error: {1}".format(k, str(e)))
