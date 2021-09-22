@@ -200,7 +200,7 @@ from ansible_collections.community.general.plugins.module_utils.proxmox import (
 QEMU_GET_COMMANDS = {
     'get-fsinfo': 'fsinfo',
     'get-host-name': 'hostname',
-    'get-memory-block-info': 'memory-block-size',
+    'get-memory-block-info': 'memory-block-info',
     'get-memory-blocks': 'memory-blocks',
     'get-osinfo': 'osinfo',
     'get-time': 'time',
