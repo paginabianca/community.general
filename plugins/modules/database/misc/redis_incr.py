@@ -98,9 +98,7 @@ def main():
         supports_check_mode=False,
         mutually_exclusive=[['increment_int', 'increment_float']],
     )
-    import_errors = fail_imports()
-    if len(import_errors) != 0:
-        module.fail_json(msg=import_errors)
+    fail_imports(module)
 
     redis = RedisAnsible(module)
     key = module.params['key']
