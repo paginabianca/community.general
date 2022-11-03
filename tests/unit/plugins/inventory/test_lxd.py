@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-# Copyright: (c) 2021, Frank Dornheim <dornheim@posteo.de>
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+# Copyright (c) 2021, Frank Dornheim <dornheim@posteo.de>
+# GNU General Public License v3.0+ (see LICENSES/GPL-3.0-or-later.txt or https://www.gnu.org/licenses/gpl-3.0.txt)
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 
 from __future__ import (absolute_import, division, print_function)
@@ -43,10 +44,11 @@ def inventory():
     # Test Values
     inv.data = inv.load_json_data('tests/unit/plugins/inventory/fixtures/lxd_inventory.atd')  # Load Test Data
     inv.groupby = GROUP_Config
-    inv.prefered_container_network_interface = 'eth'
-    inv.prefered_container_network_family = 'inet'
+    inv.prefered_instance_network_interface = 'eth'
+    inv.prefered_instance_network_family = 'inet'
     inv.filter = 'running'
     inv.dump_data = False
+    inv.type_filter = 'both'
 
     return inv
 

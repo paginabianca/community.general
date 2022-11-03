@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) Ansible Project
+# GNU General Public License v3.0+ (see LICENSES/GPL-3.0-or-later.txt or https://www.gnu.org/licenses/gpl-3.0.txt)
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 set -o pipefail -eux
 
@@ -50,7 +53,7 @@ function retry
         echo "@* -> ${result}"
     done
     echo "Command '@*' failed 3 times!"
-    exit -1
+    exit 255
 }
 
 command -v pip
@@ -86,23 +89,20 @@ if [ "${script}" != "sanity" ] || [ "${test}" == "sanity/extra" ]; then
     # retry ansible-galaxy -vvv collection install community.internal_test_tools
 fi
 
-if [ "${script}" != "sanity" ] && [ "${script}" != "units" ]; then
+if [ "${script}" != "sanity" ] && [ "${script}" != "units" ] && [ "${test}" != "sanity/extra" ]; then
+    CRYPTO_BRANCH=main
+    if [ "${script}" == "linux" ] && [[ "${test}" =~ "ubuntu1604/" ]]; then
+        CRYPTO_BRANCH=stable-1
+    fi
     # To prevent Python dependencies on other collections only install other collections for integration tests
     retry git clone --depth=1 --single-branch https://github.com/ansible-collections/ansible.posix.git "${ANSIBLE_COLLECTIONS_PATHS}/ansible_collections/ansible/posix"
-    retry git clone --depth=1 --single-branch https://github.com/ansible-collections/community.crypto.git "${ANSIBLE_COLLECTIONS_PATHS}/ansible_collections/community/crypto"
+    retry git clone --depth=1 --branch "${CRYPTO_BRANCH}" --single-branch https://github.com/ansible-collections/community.crypto.git "${ANSIBLE_COLLECTIONS_PATHS}/ansible_collections/community/crypto"
     # NOTE: we're installing with git to work around Galaxy being a huge PITA (https://github.com/ansible/galaxy/issues/2429)
     # retry ansible-galaxy -vvv collection install ansible.posix
     # retry ansible-galaxy -vvv collection install community.crypto
 fi
 
 # END: HACK
-
-if [ "${script}" != "sanity" ] && [ "${script}" != "units" ]; then
-    # Adds meta/runtime.yml redirects for all modules before running integration tests.
-    # This ensures that ansible-base and ansible-core will use the "real" modules instead of the
-    # symbolic links, which results in coverage to be reported correctly.
-    "${ANSIBLE_COLLECTIONS_PATHS}/ansible_collections/community/internal_test_tools/tools/meta_runtime.py" redirect --target both --flatmap
-fi
 
 export PYTHONIOENCODING='utf-8'
 
@@ -232,4 +232,4 @@ fi
 ansible-test env --dump --show --timeout "${timeout}" --color -v
 
 if [ "${SHIPPABLE_BUILD_ID:-}" ]; then "tests/utils/shippable/check_matrix.py"; fi
-"tests/utils/shippable/${script}.sh" "${test}"
+"tests/utils/shippable/${script}.sh" "${test}" "${ansible_version}"

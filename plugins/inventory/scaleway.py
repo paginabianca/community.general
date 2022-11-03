@@ -1,5 +1,7 @@
-# Copyright: (c) 2017 Ansible Project
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+# -*- coding: utf-8 -*-
+# Copyright (c) 2017 Ansible Project
+# GNU General Public License v3.0+ (see LICENSES/GPL-3.0-or-later.txt or https://www.gnu.org/licenses/gpl-3.0.txt)
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import (absolute_import, division, print_function)
 
@@ -8,18 +10,21 @@ __metaclass__ = type
 DOCUMENTATION = r'''
     name: scaleway
     author:
-      - Remy Leone (@sieben)
+      - Remy Leone (@remyleone)
     short_description: Scaleway inventory source
     description:
         - Get inventory hosts from Scaleway.
+    requirements:
+        - PyYAML
     options:
         plugin:
             description: Token that ensures this is a source file for the 'scaleway' plugin.
-            required: True
+            required: true
             choices: ['scaleway', 'community.general.scaleway']
         regions:
             description: Filter results on a specific Scaleway region.
             type: list
+            elements: string
             default:
                 - ams1
                 - par1
@@ -28,10 +33,18 @@ DOCUMENTATION = r'''
         tags:
             description: Filter results on a specific tag.
             type: list
+            elements: string
+        scw_profile:
+            description:
+            - The config profile to use in config file.
+            - By default uses the one specified as C(active_profile) in the config file, or falls back to C(default) if that is not defined.
+            type: string
+            version_added: 4.4.0
         oauth_token:
-            required: True
             description:
             - Scaleway OAuth token.
+            - If not explicitly defined or in environment variables, it will try to lookup in the scaleway-cli configuration file
+              (C($SCW_CONFIG_PATH), C($XDG_CONFIG_HOME/scw/config.yaml), or C(~/.config/scw/config.yaml)).
             - More details on L(how to generate token, https://www.scaleway.com/en/docs/generate-api-keys/).
             env:
                 # in order of precedence
@@ -41,6 +54,7 @@ DOCUMENTATION = r'''
         hostnames:
             description: List of preference about what to use as an hostname.
             type: list
+            elements: string
             default:
                 - public_ipv4
             choices:
@@ -94,13 +108,22 @@ variables:
   ansible_user: "'admin'"
 '''
 
+import os
 import json
+
+try:
+    import yaml
+except ImportError as exc:
+    YAML_IMPORT_ERROR = exc
+else:
+    YAML_IMPORT_ERROR = None
 
 from ansible.errors import AnsibleError
 from ansible.plugins.inventory import BaseInventoryPlugin, Constructable
 from ansible_collections.community.general.plugins.module_utils.scaleway import SCALEWAY_LOCATION, parse_pagination_link
 from ansible.module_utils.urls import open_url
 from ansible.module_utils.common.text.converters import to_native, to_text
+from ansible.module_utils.six import raise_from
 
 import ansible.module_utils.six.moves.urllib.parse as urllib_parse
 
@@ -277,13 +300,44 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
                 # Composed variables
                 self._set_composite_vars(self.get_option('variables'), host_infos, hostname, strict=False)
 
+    def get_oauth_token(self):
+        oauth_token = self.get_option('oauth_token')
+
+        if 'SCW_CONFIG_PATH' in os.environ:
+            scw_config_path = os.getenv('SCW_CONFIG_PATH')
+        elif 'XDG_CONFIG_HOME' in os.environ:
+            scw_config_path = os.path.join(os.getenv('XDG_CONFIG_HOME'), 'scw', 'config.yaml')
+        else:
+            scw_config_path = os.path.join(os.path.expanduser('~'), '.config', 'scw', 'config.yaml')
+
+        if not oauth_token and os.path.exists(scw_config_path):
+            with open(scw_config_path) as fh:
+                scw_config = yaml.safe_load(fh)
+                ansible_profile = self.get_option('scw_profile')
+
+                if ansible_profile:
+                    active_profile = ansible_profile
+                else:
+                    active_profile = scw_config.get('active_profile', 'default')
+
+                if active_profile == 'default':
+                    oauth_token = scw_config.get('secret_key')
+                else:
+                    oauth_token = scw_config['profiles'][active_profile].get('secret_key')
+
+        return oauth_token
+
     def parse(self, inventory, loader, path, cache=True):
+        if YAML_IMPORT_ERROR:
+            raise_from(AnsibleError('PyYAML is probably missing'), YAML_IMPORT_ERROR)
         super(InventoryModule, self).parse(inventory, loader, path)
         self._read_config_data(path=path)
 
         config_zones = self.get_option("regions")
         tags = self.get_option("tags")
-        token = self.get_option("oauth_token")
+        token = self.get_oauth_token()
+        if not token:
+            raise AnsibleError("'oauth_token' value is null, you must configure it either in inventory, envvars or scaleway-cli config.")
         hostname_preference = self.get_option("hostnames")
 
         for zone in self._get_zones(config_zones):

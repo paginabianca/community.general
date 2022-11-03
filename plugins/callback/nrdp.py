@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-# (c) 2018 Remi Verchere <remi@verchere.fr>
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+# Copyright (c) 2018 Remi Verchere <remi@verchere.fr>
+# GNU General Public License v3.0+ (see LICENSES/GPL-3.0-or-later.txt or https://www.gnu.org/licenses/gpl-3.0.txt)
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 # Make coding more python3-ish
 from __future__ import (absolute_import, division, print_function)
@@ -70,6 +71,7 @@ import os
 import json
 
 from ansible.module_utils.six.moves.urllib.parse import urlencode
+from ansible.module_utils.common.text.converters import to_bytes
 from ansible.module_utils.urls import open_url
 from ansible.plugins.callback import CallbackBase
 
@@ -143,7 +145,7 @@ class CallbackModule(CallbackBase):
         body = {
             'cmd': 'submitcheck',
             'token': self.token,
-            'XMLDATA': bytes(xmldata)
+            'XMLDATA': to_bytes(xmldata)
         }
 
         try:

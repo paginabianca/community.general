@@ -1,3 +1,9 @@
+<!--
+Copyright (c) Ansible Project
+GNU General Public License v3.0+ (see LICENSES/GPL-3.0-or-later.txt or https://www.gnu.org/licenses/gpl-3.0.txt)
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 Committers Guidelines for community.general
 ===========================================
 
@@ -69,5 +75,6 @@ Individuals who have been asked to become a part of this group have generally be
 | ------------------- | -------------------- | ------------------ | -------------------- |
 | Alexei Znamensky    | russoz               | russoz             |                      |
 | Andrew Klychkov     | andersson007         | andersson007_      |                      |
+| Andrew Pantuso      | Ajpantuso            | ajpantuso          |                      |
 | Felix Fontein       | felixfontein         | felixfontein       |                      |
 | John R Barker       | gundalow             | gundalow           |                      |

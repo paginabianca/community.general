@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 # (c) 2020, Alexei Znamensky <russoz@gmail.com>
-# Copyright: (c) 2020, Ansible Project
-# Simplified BSD License (see licenses/simplified_bsd.txt or https://opensource.org/licenses/BSD-2-Clause)
+# Copyright (c) 2020, Ansible Project
+# Simplified BSD License (see LICENSES/BSD-2-Clause.txt or https://opensource.org/licenses/BSD-2-Clause)
+# SPDX-License-Identifier: BSD-2-Clause
 
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
@@ -52,3 +53,36 @@ def module_fails_on_exception(func):
             self.module.fail_json(msg=msg, exception=traceback.format_exc(),
                                   output=self.output, vars=self.vars.output(), **self.output)
     return wrapper
+
+
+def check_mode_skip(func):
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        if not self.module.check_mode:
+            return func(self, *args, **kwargs)
+    return wrapper
+
+
+def check_mode_skip_returns(callable=None, value=None):
+
+    def deco(func):
+        if callable is not None:
+            @wraps(func)
+            def wrapper_callable(self, *args, **kwargs):
+                if self.module.check_mode:
+                    return callable(self, *args, **kwargs)
+                return func(self, *args, **kwargs)
+            return wrapper_callable
+
+        if value is not None:
+            @wraps(func)
+            def wrapper_value(self, *args, **kwargs):
+                if self.module.check_mode:
+                    return value
+                return func(self, *args, **kwargs)
+            return wrapper_value
+
+    if callable is None and value is None:
+        return check_mode_skip
+
+    return deco

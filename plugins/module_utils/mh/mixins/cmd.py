@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 # (c) 2020, Alexei Znamensky <russoz@gmail.com>
-# Copyright: (c) 2020, Ansible Project
-# Simplified BSD License (see licenses/simplified_bsd.txt or https://opensource.org/licenses/BSD-2-Clause)
+# Copyright (c) 2020, Ansible Project
+# Simplified BSD License (see LICENSES/BSD-2-Clause.txt or https://opensource.org/licenses/BSD-2-Clause)
+# SPDX-License-Identifier: BSD-2-Clause
 
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
@@ -16,6 +17,7 @@ class ArgFormat(object):
     BOOLEAN = 0
     PRINTF = 1
     FORMAT = 2
+    BOOLEAN_NOT = 3
 
     @staticmethod
     def stars_deco(num):
@@ -32,6 +34,10 @@ class ArgFormat(object):
 
     def __init__(self, name, fmt=None, style=FORMAT, stars=0):
         """
+        THIS CLASS IS BEING DEPRECATED.
+        It was never meant to be used outside the scope of CmdMixin, and CmdMixin is being deprecated.
+        See the deprecation notice in ``CmdMixin.__init__()`` below.
+
         Creates a CLI-formatter for one specific argument. The argument may be a module parameter or just a named parameter for
         the CLI command execution.
         :param name: Name of the argument to be formatted
@@ -50,12 +56,14 @@ class ArgFormat(object):
 
         _fmts = {
             ArgFormat.BOOLEAN: lambda _fmt, v: ([_fmt] if bool(v) else []),
+            ArgFormat.BOOLEAN_NOT: lambda _fmt, v: ([] if bool(v) else [_fmt]),
             ArgFormat.PRINTF: printf_fmt,
             ArgFormat.FORMAT: lambda _fmt, v: [_fmt.format(v)],
         }
 
         self.name = name
         self.stars = stars
+        self.style = style
 
         if fmt is None:
             fmt = "{0}"
@@ -76,7 +84,7 @@ class ArgFormat(object):
             self.arg_format = (self.stars_deco(stars))(self.arg_format)
 
     def to_text(self, value):
-        if value is None:
+        if value is None and self.style != ArgFormat.BOOLEAN_NOT:
             return []
         func = self.arg_format
         return [str(p) for p in func(value)]
@@ -84,6 +92,9 @@ class ArgFormat(object):
 
 class CmdMixin(object):
     """
+    THIS CLASS IS BEING DEPRECATED.
+    See the deprecation notice in ``CmdMixin.__init__()`` below.
+
     Mixin for mapping module options to running a CLI command with its arguments.
     """
     command = None
@@ -106,6 +117,15 @@ class CmdMixin(object):
             result[param] = ArgFormat(param, **fmt_spec)
         return result
 
+    def __init__(self, *args, **kwargs):
+        super(CmdMixin, self).__init__(*args, **kwargs)
+        self.module.deprecate(
+            'The CmdMixin used in classes CmdModuleHelper and CmdStateModuleHelper is being deprecated. '
+            'Modules should use community.general.plugins.module_utils.cmd_runner.CmdRunner instead.',
+            version='8.0.0',
+            collection_name='community.general',
+        )
+
     def _calculate_args(self, extra_params=None, params=None):
         def add_arg_formatted_param(_cmd_args, arg_format, _value):
             args = list(arg_format.to_text(_value))
@@ -125,8 +145,7 @@ class CmdMixin(object):
         for param in param_list:
             if isinstance(param, dict):
                 if len(param) != 1:
-                    raise self.ModuleHelperException("run_command parameter as a dict must "
-                                                     "contain only one key: {0}".format(param))
+                    self.do_raise("run_command parameter as a dict must contain only one key: {0}".format(param))
                 _param = list(param.keys())[0]
                 fmt = find_format(_param)
                 value = param[_param]
@@ -138,13 +157,9 @@ class CmdMixin(object):
                     fmt = find_format(param)
                     value = extra_params[param]
                 else:
-                    self.module.deprecate("Cannot determine value for parameter: {0}. "
-                                          "From version 4.0.0 onwards this will generate an exception".format(param),
-                                          version="4.0.0", collection_name="community.general")
-                    continue
-
+                    self.do_raise('Cannot determine value for parameter: {0}'.format(param))
             else:
-                raise self.ModuleHelperException("run_command parameter must be either a str or a dict: {0}".format(param))
+                self.do_raise("run_command parameter must be either a str or a dict: {0}".format(param))
             cmd_args = add_arg_formatted_param(cmd_args, fmt, value)
 
         return cmd_args
@@ -159,8 +174,9 @@ class CmdMixin(object):
                     publish_rc=True,
                     publish_out=True,
                     publish_err=True,
+                    publish_cmd=True,
                     *args, **kwargs):
-        self.vars.cmd_args = self._calculate_args(extra_params, params)
+        cmd_args = self._calculate_args(extra_params, params)
         options = dict(self.run_command_fixed_options)
         options['check_rc'] = options.get('check_rc', self.check_rc)
         options.update(kwargs)
@@ -172,13 +188,15 @@ class CmdMixin(object):
             })
             self.update_output(force_lang=self.force_lang)
             options['environ_update'] = env_update
-        rc, out, err = self.module.run_command(self.vars.cmd_args, *args, **options)
+        rc, out, err = self.module.run_command(cmd_args, *args, **options)
         if publish_rc:
             self.update_output(rc=rc)
         if publish_out:
             self.update_output(stdout=out)
         if publish_err:
             self.update_output(stderr=err)
+        if publish_cmd:
+            self.update_output(cmd_args=cmd_args)
         if process_output is None:
             _process = self.process_command_output
         else:

@@ -1,6 +1,8 @@
-# (c) 2014, Brian Coca, Josh Drake, et al
-# (c) 2017 Ansible Project
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+# -*- coding: utf-8 -*-
+# Copyright (c) 2014, Brian Coca, Josh Drake, et al
+# Copyright (c) 2017 Ansible Project
+# GNU General Public License v3.0+ (see LICENSES/GPL-3.0-or-later.txt or https://www.gnu.org/licenses/gpl-3.0.txt)
+# SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
@@ -19,7 +21,7 @@ DOCUMENTATION = '''
           - The format is C(host:port:db:password), for example C(localhost:6379:0:changeme).
           - To use encryption in transit, prefix the connection with C(tls://), as in C(tls://localhost:6379:0:changeme).
           - To use redis sentinel, use separator C(;), for example C(localhost:26379;localhost:26379;0:changeme). Requires redis>=2.9.0.
-        required: True
+        required: true
         env:
           - name: ANSIBLE_CACHE_PLUGIN_CONNECTION
         ini:
@@ -98,23 +100,13 @@ class CacheModule(BaseCacheModule):
     def __init__(self, *args, **kwargs):
         uri = ''
 
-        try:
-            super(CacheModule, self).__init__(*args, **kwargs)
-            if self.get_option('_uri'):
-                uri = self.get_option('_uri')
-            self._timeout = float(self.get_option('_timeout'))
-            self._prefix = self.get_option('_prefix')
-            self._keys_set = self.get_option('_keyset_name')
-            self._sentinel_service_name = self.get_option('_sentinel_service_name')
-        except KeyError:
-            # TODO: remove once we no longer support Ansible 2.9
-            if not ansible_base_version.startswith('2.9.'):
-                raise AnsibleError("Do not import CacheModules directly. Use ansible.plugins.loader.cache_loader instead.")
-            if C.CACHE_PLUGIN_CONNECTION:
-                uri = C.CACHE_PLUGIN_CONNECTION
-            self._timeout = float(C.CACHE_PLUGIN_TIMEOUT)
-            self._prefix = C.CACHE_PLUGIN_PREFIX
-            self._keys_set = 'ansible_cache_keys'
+        super(CacheModule, self).__init__(*args, **kwargs)
+        if self.get_option('_uri'):
+            uri = self.get_option('_uri')
+        self._timeout = float(self.get_option('_timeout'))
+        self._prefix = self.get_option('_prefix')
+        self._keys_set = self.get_option('_keyset_name')
+        self._sentinel_service_name = self.get_option('_sentinel_service_name')
 
         if not HAS_REDIS:
             raise AnsibleError("The 'redis' python module (version 2.4.5 or newer) is required for the redis fact cache, 'pip install redis'")

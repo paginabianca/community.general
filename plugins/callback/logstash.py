@@ -1,6 +1,8 @@
-# (C) 2020, Yevhen Khmelenko <ujenmr@gmail.com>
-# (C) 2017 Ansible Project
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+# -*- coding: utf-8 -*-
+# Copyright (c) 2020, Yevhen Khmelenko <ujenmr@gmail.com>
+# Copyright (c) 2017 Ansible Project
+# GNU General Public License v3.0+ (see LICENSES/GPL-3.0-or-later.txt or https://www.gnu.org/licenses/gpl-3.0.txt)
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
@@ -44,7 +46,7 @@ DOCUMENTATION = r'''
             version_added: 1.0.0
         default: ansible
       pre_command:
-        description: Executes command before run and result put to ansible_pre_command_output field.
+        description: Executes command before run and its result is added to the C(ansible_pre_command_output) logstash field.
         version_added: 2.0.0
         ini:
           - section: callback_logstash
@@ -93,6 +95,7 @@ ansible.cfg: |
 
 import os
 import json
+from ansible import context
 import socket
 import uuid
 import logging
@@ -151,11 +154,11 @@ class CallbackModule(CallbackBase):
                 self.base_data['ansible_pre_command_output'] = os.popen(
                     self.ls_pre_command).read()
 
-            if self._options is not None:
-                self.base_data['ansible_checkmode'] = self._options.check
-                self.base_data['ansible_tags'] = self._options.tags
-                self.base_data['ansible_skip_tags'] = self._options.skip_tags
-                self.base_data['inventory'] = self._options.inventory
+            if context.CLIARGS is not None:
+                self.base_data['ansible_checkmode'] = context.CLIARGS.get('check')
+                self.base_data['ansible_tags'] = context.CLIARGS.get('tags')
+                self.base_data['ansible_skip_tags'] = context.CLIARGS.get('skip_tags')
+                self.base_data['inventory'] = context.CLIARGS.get('inventory')
 
     def set_options(self, task_keys=None, var_options=None, direct=None):
         super(CallbackModule, self).set_options(task_keys=task_keys, var_options=var_options, direct=direct)

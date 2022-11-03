@@ -7,7 +7,8 @@
 #
 # Copyright (c) 2016 Thomas Krahn (@Nosmoht)
 #
-# Simplified BSD License (see licenses/simplified_bsd.txt or https://opensource.org/licenses/BSD-2-Clause)
+# Simplified BSD License (see LICENSES/BSD-2-Clause.txt or https://opensource.org/licenses/BSD-2-Clause)
+# SPDX-License-Identifier: BSD-2-Clause
 
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
@@ -31,6 +32,7 @@ def _env_then_dns_fallback(*args, **kwargs):
         result = env_fallback(*args, **kwargs)
         if result == '':
             raise AnsibleFallbackNotFound
+        return result
     except AnsibleFallbackNotFound:
         # If no host was given, we try to guess it from IPA.
         # The ipa-ca entry is a standard entry that IPA will have set for
@@ -178,10 +180,10 @@ class IPAClient(object):
                 result.append(key)
         return result
 
-    def modify_if_diff(self, name, ipa_list, module_list, add_method, remove_method, item=None):
+    def modify_if_diff(self, name, ipa_list, module_list, add_method, remove_method, item=None, append=None):
         changed = False
         diff = list(set(ipa_list) - set(module_list))
-        if len(diff) > 0:
+        if append is not True and len(diff) > 0:
             changed = True
             if not self.module.check_mode:
                 if item:

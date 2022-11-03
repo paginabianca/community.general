@@ -1,4 +1,8 @@
 ---
+# Copyright (c) Ansible Project
+# GNU General Public License v3.0+ (see LICENSES/GPL-3.0-or-later.txt or https://www.gnu.org/licenses/gpl-3.0.txt)
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 # By installing e2fsprogs on FreeBSD, we get a usable blkid command, but this
 # package conflicts with util-linux, that provides blkid too, but also wipefs
 # (required for filesystem state=absent).
@@ -8,7 +12,7 @@
     state: present
   # xfsprogs on OpenSUSE requires Python 3, skip this for our newer Py2 OpenSUSE builds
   when: not (item == 'xfsprogs' and ansible_os_family == 'Suse' and ansible_python.version.major == 2 and ansible_distribution_major_version|int != 42)
-  with_items:
+  loop:
     - e2fsprogs
     - xfsprogs
 
@@ -21,6 +25,7 @@
     - not (ansible_distribution == 'Ubuntu' and ansible_distribution_version is version('16.04', '<='))
     - ansible_system != "FreeBSD"
     - not (ansible_facts.os_family == "RedHat" and ansible_facts.distribution_major_version is version('8', '>='))
+    - ansible_os_family != 'Archlinux'  # TODO
 
 - name: "Install btrfs tools (Ubuntu <= 16.04)"
   ansible.builtin.package:
@@ -32,23 +37,24 @@
 
 - name: "Install btrfs progs (OpenSuse)"
   ansible.builtin.package:
-    name: '{{ item }}'
+    name:
+      - python{{ ansible_python.version.major }}-xml
+      - btrfsprogs
     state: present
   when: ansible_os_family == 'Suse'
-  with_items:
-    - python{{ ansible_python.version.major }}-xml
-    - btrfsprogs
 
 - name: "Install reiserfs utils (Fedora)"
   ansible.builtin.package:
     name: reiserfs-utils
     state: present
   when:
-    - ansible_distribution == 'Fedora'
+    - ansible_distribution == 'Fedora' and (ansible_facts.distribution_major_version | int < 35)
 
-- name: "Install reiserfs (OpenSuse)"
+- name: "Install reiserfs and util-linux-systemd (for findmnt) (OpenSuse)"
   ansible.builtin.package:
-    name: reiserfs
+    name:
+      - reiserfs
+      - util-linux-systemd
     state: present
   when:
     - ansible_os_family == 'Suse'
@@ -59,7 +65,7 @@
     state: present
   when:
     - ansible_system == 'Linux'
-    - ansible_os_family not in ['Suse', 'RedHat']
+    - ansible_os_family not in ['Suse', 'RedHat', 'Alpine']
 
 - name: "Install reiserfs progs (FreeBSD)"
   ansible.builtin.package:
@@ -100,10 +106,9 @@
 
 - name: "Install dosfstools and lvm2 (Linux)"
   ansible.builtin.package:
-    name: '{{ item }}'
-  with_items:
-    - dosfstools
-    - lvm2
+    name:
+      - dosfstools
+      - lvm2
   when: ansible_system == 'Linux'
 
 - name: "Install fatresize and get version"
@@ -111,6 +116,7 @@
     - ansible_system == 'Linux'
     - ansible_os_family != 'Suse'
     - ansible_os_family != 'RedHat' or (ansible_distribution == 'CentOS' and ansible_distribution_version is version('7.0', '=='))
+    - ansible_os_family != 'Alpine'
   block:
     - name: "Install fatresize"
       ansible.builtin.package:

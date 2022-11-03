@@ -1,19 +1,22 @@
-# (c) 2015-2021, Felix Fontein <felix@fontein.de>
-# (c) 2018 Ansible Project
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+# -*- coding: utf-8 -*-
+# Copyright (c) 2015-2021, Felix Fontein <felix@fontein.de>
+# Copyright (c) 2018 Ansible Project
+# GNU General Public License v3.0+ (see LICENSES/GPL-3.0-or-later.txt or https://www.gnu.org/licenses/gpl-3.0.txt)
+# SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 DOCUMENTATION = """
 name: dependent
 short_description: Composes a list with nested elements of other lists or dicts which can depend on previous loop variables
+author: Felix Fontein (@felixfontein)
 version_added: 3.1.0
 description:
   - "Takes the input lists and returns a list with elements that are lists, dictionaries,
      or template expressions which evaluate to lists or dicts, composed of the elements of
      the input evaluated lists and dictionaries."
 options:
-  _raw:
+  _terms:
     description:
       - A list where the elements are one-element dictionaries, mapping a name to a string, list, or dictionary.
         The name is the index that is used in the result object. The value is iterated over as described below.
@@ -177,6 +180,8 @@ class LookupModule(LookupBase):
 
     def run(self, terms, variables=None, **kwargs):
         """Generate list."""
+        self.set_options(var_options=variables, direct=kwargs)
+
         result = []
         if len(terms) > 0:
             templar = Templar(loader=self._templar._loader)

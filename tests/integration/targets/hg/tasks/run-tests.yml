@@ -1,19 +1,20 @@
 # test code for the hg module
-# Copyright: (c) 2018, Ansible Project
+# Copyright (c) 2018, Ansible Project
 #
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+# GNU General Public License v3.0+ (see LICENSES/GPL-3.0-or-later.txt or https://www.gnu.org/licenses/gpl-3.0.txt)
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 
 - name: set where to extract the repo
   set_fact:
-    checkout_dir: "{{ output_dir }}/hg_project_test"
+    checkout_dir: "{{ remote_tmp_dir }}/hg_project_test"
 
 - name: set what repo to use
   set_fact:
     repo: "http://hg.pf.osdn.net/view/a/ak/akasurde/hg_project_test"
 
-- name: clean out the output_dir
-  shell: rm -rf {{ output_dir }}/*
+- name: clean out the remote_tmp_dir
+  shell: rm -rf {{ remote_tmp_dir }}/*
 
 - name: verify that mercurial is installed so this test can continue
   shell: which hg

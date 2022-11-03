@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Copyright: (c) 2017, Eike Frost <ei@kefro.st>
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+# Copyright (c) 2017, Eike Frost <ei@kefro.st>
+# GNU General Public License v3.0+ (see LICENSES/GPL-3.0-or-later.txt or https://www.gnu.org/licenses/gpl-3.0.txt)
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
@@ -60,5 +61,18 @@ options:
         description:
             - Verify TLS certificates (do not disable this in production).
         type: bool
-        default: yes
+        default: true
+
+    connection_timeout:
+        description:
+            - Controls the HTTP connections timeout period (in seconds) to Keycloak API.
+        type: int
+        default: 10
+        version_added: 4.5.0
+    http_agent:
+        description:
+            - Configures the HTTP User-Agent header.
+        type: str
+        default: Ansible
+        version_added: 5.4.0
 '''

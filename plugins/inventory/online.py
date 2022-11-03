@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2018 Ansible Project
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+# GNU General Public License v3.0+ (see LICENSES/GPL-3.0-or-later.txt or https://www.gnu.org/licenses/gpl-3.0.txt)
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
@@ -7,17 +9,17 @@ __metaclass__ = type
 DOCUMENTATION = r'''
     name: online
     author:
-      - Remy Leone (@sieben)
+      - Remy Leone (@remyleone)
     short_description: Scaleway (previously Online SAS or Online.net) inventory source
     description:
         - Get inventory hosts from Scaleway (previously Online SAS or Online.net).
     options:
         plugin:
             description: token that ensures this is a source file for the 'online' plugin.
-            required: True
+            required: true
             choices: ['online', 'community.general.online']
         oauth_token:
-            required: True
+            required: true
             description: Online OAuth token.
             env:
                 # in order of precedence
@@ -27,6 +29,7 @@ DOCUMENTATION = r'''
         hostnames:
             description: List of preference about what to use as an hostname.
             type: list
+            elements: string
             default:
                 - public_ipv4
             choices:
@@ -36,6 +39,7 @@ DOCUMENTATION = r'''
         groups:
             description: List of groups.
             type: list
+            elements: string
             choices:
                 - location
                 - offer
@@ -234,7 +238,7 @@ class InventoryModule(BaseInventoryPlugin):
 
         self.headers = {
             'Authorization': "Bearer %s" % token,
-            'User-Agent': "ansible %s Python %s" % (ansible_version, python_version.split(' ')[0]),
+            'User-Agent': "ansible %s Python %s" % (ansible_version, python_version.split(' ', 1)[0]),
             'Content-type': 'application/json'
         }
 

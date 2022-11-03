@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 # (c) 2020, Alexei Znamensky <russoz@gmail.com>
-# Copyright: (c) 2020, Ansible Project
-# Simplified BSD License (see licenses/simplified_bsd.txt or https://opensource.org/licenses/BSD-2-Clause)
+# Copyright (c) 2020, Ansible Project
+# Simplified BSD License (see LICENSES/BSD-2-Clause.txt or https://opensource.org/licenses/BSD-2-Clause)
+# SPDX-License-Identifier: BSD-2-Clause
 
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
@@ -12,18 +13,17 @@ from ansible_collections.community.general.plugins.module_utils.mh.base import M
 from ansible_collections.community.general.plugins.module_utils.mh.mixins.cmd import CmdMixin
 from ansible_collections.community.general.plugins.module_utils.mh.mixins.state import StateMixin
 from ansible_collections.community.general.plugins.module_utils.mh.mixins.deps import DependencyMixin
-from ansible_collections.community.general.plugins.module_utils.mh.mixins.vars import VarsMixin, VarDict as _VD
+from ansible_collections.community.general.plugins.module_utils.mh.mixins.vars import VarsMixin
+from ansible_collections.community.general.plugins.module_utils.mh.mixins.deprecate_attrs import DeprecateAttrsMixin
 
 
-class ModuleHelper(VarsMixin, DependencyMixin, ModuleHelperBase):
+class ModuleHelper(DeprecateAttrsMixin, VarsMixin, DependencyMixin, ModuleHelperBase):
     _output_conflict_list = ('msg', 'exception', 'output', 'vars', 'changed')
     facts_name = None
     output_params = ()
     diff_params = ()
     change_params = ()
     facts_params = ()
-
-    VarDict = _VD  # for backward compatibility, will be deprecated at some point
 
     def __init__(self, module=None):
         super(ModuleHelper, self).__init__(module)
@@ -55,7 +55,7 @@ class ModuleHelper(VarsMixin, DependencyMixin, ModuleHelperBase):
             facts = self.vars.facts()
             if facts is not None:
                 result['ansible_facts'] = {self.facts_name: facts}
-        if self.module._diff:
+        if self.diff_mode:
             diff = result.get('diff', {})
             vars_diff = self.vars.diff() or {}
             result['diff'] = dict_merge(dict(diff), vars_diff)
@@ -72,8 +72,16 @@ class StateModuleHelper(StateMixin, ModuleHelper):
 
 
 class CmdModuleHelper(CmdMixin, ModuleHelper):
+    """
+    THIS CLASS IS BEING DEPRECATED.
+    See the deprecation notice in ``CmdMixin.__init__()``.
+    """
     pass
 
 
 class CmdStateModuleHelper(CmdMixin, StateMixin, ModuleHelper):
+    """
+    THIS CLASS IS BEING DEPRECATED.
+    See the deprecation notice in ``CmdMixin.__init__()``.
+    """
     pass

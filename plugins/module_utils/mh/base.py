@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 # (c) 2020, Alexei Znamensky <russoz@gmail.com>
-# Copyright: (c) 2020, Ansible Project
-# Simplified BSD License (see licenses/simplified_bsd.txt or https://opensource.org/licenses/BSD-2-Clause)
+# Copyright (c) 2020, Ansible Project
+# Simplified BSD License (see LICENSES/BSD-2-Clause.txt or https://opensource.org/licenses/BSD-2-Clause)
+# SPDX-License-Identifier: BSD-2-Clause
 
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
@@ -14,6 +15,9 @@ from ansible_collections.community.general.plugins.module_utils.mh.deco import m
 class ModuleHelperBase(object):
     module = None
     ModuleHelperException = _MHE
+    _delegated_to_module = (
+        'check_mode', 'get_bin_path', 'warn', 'deprecate',
+    )
 
     def __init__(self, module=None):
         self._changed = False
@@ -23,6 +27,22 @@ class ModuleHelperBase(object):
 
         if not isinstance(self.module, AnsibleModule):
             self.module = AnsibleModule(**self.module)
+
+    @property
+    def diff_mode(self):
+        return self.module._diff
+
+    @property
+    def verbosity(self):
+        return self.module._verbosity
+
+    def do_raise(self, *args, **kwargs):
+        raise _MHE(*args, **kwargs)
+
+    def __getattr__(self, attr):
+        if attr in self._delegated_to_module:
+            return getattr(self.module, attr)
+        raise AttributeError("ModuleHelperBase has no attribute '%s'" % (attr, ))
 
     def __init_module__(self):
         pass
@@ -63,3 +83,7 @@ class ModuleHelperBase(object):
         if 'failed' not in output:
             output['failed'] = False
         self.module.exit_json(changed=self.has_changed(), **output)
+
+    @classmethod
+    def execute(cls, module=None):
+        cls(module).run()

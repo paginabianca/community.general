@@ -1,9 +1,11 @@
+# -*- coding: utf-8 -*-
 # Based on local.py by Michael DeHaan <michael.dehaan@gmail.com>
 # and chroot.py by  Maykel Moya <mmoya@speedyrails.com>
 # Copyright (c) 2013, Michael Scherer <misc@zarb.org>
 # Copyright (c) 2015, Toshio Kuratomi <tkuratomi@ansible.com>
 # Copyright (c) 2017 Ansible Project
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+# GNU General Public License v3.0+ (see LICENSES/GPL-3.0-or-later.txt or https://www.gnu.org/licenses/gpl-3.0.txt)
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
@@ -30,7 +32,6 @@ DOCUMENTATION = '''
             - name: ansible_jail_user
 '''
 
-import distutils.spawn
 import os
 import os.path
 import subprocess
@@ -38,6 +39,7 @@ import traceback
 
 from ansible.errors import AnsibleError
 from ansible.module_utils.six.moves import shlex_quote
+from ansible.module_utils.common.process import get_bin_path
 from ansible.module_utils.common.text.converters import to_bytes, to_native, to_text
 from ansible.plugins.connection import ConnectionBase, BUFSIZE
 from ansible.utils.display import Display
@@ -74,10 +76,10 @@ class Connection(ConnectionBase):
 
     @staticmethod
     def _search_executable(executable):
-        cmd = distutils.spawn.find_executable(executable)
-        if not cmd:
+        try:
+            return get_bin_path(executable)
+        except ValueError:
             raise AnsibleError("%s command not found in PATH" % executable)
-        return cmd
 
     def list_jails(self):
         p = subprocess.Popen([self.jls_cmd, '-q', 'name'],

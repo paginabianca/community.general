@@ -1,9 +1,11 @@
+# -*- coding: utf-8 -*-
 # Based on local.py (c) 2012, Michael DeHaan <michael.dehaan@gmail.com>
 # Based on chroot.py (c) 2013, Maykel Moya <mmoya@speedyrails.com>
 # Based on func.py
-# (c) 2014, Michael Scherer <misc@zarb.org>
-# (c) 2017 Ansible Project
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+# Copyright (c) 2014, Michael Scherer <misc@zarb.org>
+# Copyright (c) 2017 Ansible Project
+# GNU General Public License v3.0+ (see LICENSES/GPL-3.0-or-later.txt or https://www.gnu.org/licenses/gpl-3.0.txt)
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
@@ -50,7 +52,7 @@ class Connection(ConnectionBase):
         self._connected = True
         return self
 
-    def exec_command(self, cmd, sudoable=False, in_data=None):
+    def exec_command(self, cmd, in_data=None, sudoable=False):
         """ run a command on the remote minion """
         super(Connection, self).exec_command(cmd, in_data=in_data, sudoable=sudoable)
 

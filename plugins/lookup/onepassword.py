@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-# Copyright: (c) 2018, Scott Buchanan <sbuchanan@ri.pn>
-# Copyright: (c) 2016, Andrew Zenk <azenk@umn.edu> (lastpass.py used as starting point)
-# Copyright: (c) 2018, Ansible Project
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+# Copyright (c) 2018, Scott Buchanan <sbuchanan@ri.pn>
+# Copyright (c) 2016, Andrew Zenk <azenk@umn.edu> (lastpass.py used as starting point)
+# Copyright (c) 2018, Ansible Project
+# GNU General Public License v3.0+ (see LICENSES/GPL-3.0-or-later.txt or https://www.gnu.org/licenses/gpl-3.0.txt)
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
@@ -21,7 +22,7 @@ DOCUMENTATION = '''
     options:
       _terms:
         description: identifier(s) (UUID, name, or subdomain; case-insensitive) of item(s) to retrieve.
-        required: True
+        required: true
       field:
         description: field to return from each matching item (case-insensitive).
         default: 'password'
@@ -45,8 +46,8 @@ DOCUMENTATION = '''
         description: Vault containing the item to retrieve (case-insensitive). If absent will search all vaults.
     notes:
       - This lookup will use an existing 1Password session if one exists. If not, and you have already
-        performed an initial sign in (meaning C(~/.op/config exists)), then only the C(master_password) is required.
-        You may optionally specify C(subdomain) in this scenario, otherwise the last used subdomain will be used by C(op).
+        performed an initial sign in (meaning C(~/.op/config), C(~/.config/op/config) or C(~/.config/.op/config) exists), then only the
+        C(master_password) is required. You may optionally specify C(subdomain) in this scenario, otherwise the last used subdomain will be used by C(op).
       - This lookup can perform an initial login by providing C(subdomain), C(username), C(secret_key), and C(master_password).
       - Due to the B(very) sensitive nature of these credentials, it is B(highly) recommended that you only pass in the minimal credentials
         needed at any given time. Also, store these credentials in an Ansible Vault using a key that is equal to or greater in strength
@@ -105,12 +106,12 @@ from ansible.plugins.lookup import LookupBase
 from ansible.errors import AnsibleLookupError
 from ansible.module_utils.common.text.converters import to_bytes, to_text
 
+from ansible_collections.community.general.plugins.module_utils.onepassword import OnePasswordConfig
+
 
 class OnePass(object):
-
     def __init__(self, path='op'):
         self.cli_path = path
-        self.config_file_path = os.path.expanduser('~/.op/config')
         self.logged_in = False
         self.token = None
         self.subdomain = None
@@ -119,9 +120,11 @@ class OnePass(object):
         self.secret_key = None
         self.master_password = None
 
+        self._config = OnePasswordConfig()
+
     def get_token(self):
         # If the config file exists, assume an initial signin has taken place and try basic sign in
-        if os.path.isfile(self.config_file_path):
+        if os.path.isfile(self._config.config_file_path):
 
             if not self.master_password:
                 raise AnsibleLookupError('Unable to sign in to 1Password. master_password is required.')
@@ -281,4 +284,5 @@ class LookupModule(LookupBase):
         values = []
         for term in terms:
             values.append(op.get_field(term, field, section, vault))
+
         return values

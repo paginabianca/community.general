@@ -1,6 +1,8 @@
-# (c) 2016 Matt Clay <matt@mystile.com>
-# (c) 2017 Ansible Project
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+# -*- coding: utf-8 -*-
+# Copyright (c) 2016 Matt Clay <matt@mystile.com>
+# Copyright (c) 2017 Ansible Project
+# GNU General Public License v3.0+ (see LICENSES/GPL-3.0-or-later.txt or https://www.gnu.org/licenses/gpl-3.0.txt)
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
@@ -17,6 +19,7 @@ DOCUMENTATION = '''
             - Container identifier.
         default: inventory_hostname
         vars:
+            - name: inventory_hostname
             - name: ansible_host
             - name: ansible_lxd_host
       executable:
@@ -42,10 +45,10 @@ DOCUMENTATION = '''
 '''
 
 import os
-from distutils.spawn import find_executable
 from subprocess import Popen, PIPE
 
 from ansible.errors import AnsibleError, AnsibleConnectionFailure, AnsibleFileNotFound
+from ansible.module_utils.common.process import get_bin_path
 from ansible.module_utils.common.text.converters import to_bytes, to_text
 from ansible.plugins.connection import ConnectionBase
 
@@ -60,10 +63,9 @@ class Connection(ConnectionBase):
     def __init__(self, play_context, new_stdin, *args, **kwargs):
         super(Connection, self).__init__(play_context, new_stdin, *args, **kwargs)
 
-        self._host = self._play_context.remote_addr
-        self._lxc_cmd = find_executable("lxc")
-
-        if not self._lxc_cmd:
+        try:
+            self._lxc_cmd = get_bin_path("lxc")
+        except ValueError:
             raise AnsibleError("lxc command not found in PATH")
 
         if self._play_context.remote_user is not None and self._play_context.remote_user != 'root':
@@ -74,23 +76,23 @@ class Connection(ConnectionBase):
         super(Connection, self)._connect()
 
         if not self._connected:
-            self._display.vvv(u"ESTABLISH LXD CONNECTION FOR USER: root", host=self._host)
+            self._display.vvv(u"ESTABLISH LXD CONNECTION FOR USER: root", host=self.get_option('remote_addr'))
             self._connected = True
 
     def exec_command(self, cmd, in_data=None, sudoable=True):
         """ execute a command on the lxd host """
         super(Connection, self).exec_command(cmd, in_data=in_data, sudoable=sudoable)
 
-        self._display.vvv(u"EXEC {0}".format(cmd), host=self._host)
+        self._display.vvv(u"EXEC {0}".format(cmd), host=self.get_option('remote_addr'))
 
         local_cmd = [self._lxc_cmd]
         if self.get_option("project"):
             local_cmd.extend(["--project", self.get_option("project")])
         local_cmd.extend([
             "exec",
-            "%s:%s" % (self.get_option("remote"), self._host),
+            "%s:%s" % (self.get_option("remote"), self.get_option("remote_addr")),
             "--",
-            self._play_context.executable, "-c", cmd
+            self.get_option("executable"), "-c", cmd
         ])
 
         local_cmd = [to_bytes(i, errors='surrogate_or_strict') for i in local_cmd]
@@ -103,10 +105,10 @@ class Connection(ConnectionBase):
         stderr = to_text(stderr)
 
         if stderr == "error: Container is not running.\n":
-            raise AnsibleConnectionFailure("container not running: %s" % self._host)
+            raise AnsibleConnectionFailure("container not running: %s" % self.get_option('remote_addr'))
 
         if stderr == "error: not found\n":
-            raise AnsibleConnectionFailure("container not found: %s" % self._host)
+            raise AnsibleConnectionFailure("container not found: %s" % self.get_option('remote_addr'))
 
         return process.returncode, stdout, stderr
 
@@ -114,7 +116,7 @@ class Connection(ConnectionBase):
         """ put a file from local to lxd """
         super(Connection, self).put_file(in_path, out_path)
 
-        self._display.vvv(u"PUT {0} TO {1}".format(in_path, out_path), host=self._host)
+        self._display.vvv(u"PUT {0} TO {1}".format(in_path, out_path), host=self.get_option('remote_addr'))
 
         if not os.path.isfile(to_bytes(in_path, errors='surrogate_or_strict')):
             raise AnsibleFileNotFound("input path is not a file: %s" % in_path)
@@ -125,7 +127,7 @@ class Connection(ConnectionBase):
         local_cmd.extend([
             "file", "push",
             in_path,
-            "%s:%s/%s" % (self.get_option("remote"), self._host, out_path)
+            "%s:%s/%s" % (self.get_option("remote"), self.get_option("remote_addr"), out_path)
         ])
 
         local_cmd = [to_bytes(i, errors='surrogate_or_strict') for i in local_cmd]
@@ -137,14 +139,14 @@ class Connection(ConnectionBase):
         """ fetch a file from lxd to local """
         super(Connection, self).fetch_file(in_path, out_path)
 
-        self._display.vvv(u"FETCH {0} TO {1}".format(in_path, out_path), host=self._host)
+        self._display.vvv(u"FETCH {0} TO {1}".format(in_path, out_path), host=self.get_option('remote_addr'))
 
         local_cmd = [self._lxc_cmd]
         if self.get_option("project"):
             local_cmd.extend(["--project", self.get_option("project")])
         local_cmd.extend([
             "file", "pull",
-            "%s:%s/%s" % (self.get_option("remote"), self._host, in_path),
+            "%s:%s/%s" % (self.get_option("remote"), self.get_option("remote_addr"), in_path),
             out_path
         ])
 
